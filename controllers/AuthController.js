@@ -6,23 +6,30 @@ import redisClient from '../utils/redis';
 class AuthController {
   static async getConnect(request, response) {
     const authheader = request.header('Authorization');
-    /* if (!authheader) {
-       response.status(401).send({ error: 'Unauthorized' });
-    } */
+    if (!authheader) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
     const basecred = authheader.split(' ')[1];
     const cred = Buffer.from(basecred, 'base64').toString('utf8');
     const [email, password] = cred.split(':');
+    if (!email || !password) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
     const hashpassword = crypto.createHash('sha1')
       .update(password)
       .digest('hex');
     const collection = dbClient.db.collection('users');
     const user = await collection.findOne({ email, password: hashpassword });
     if (!user) {
-      response.status(401).send({ error: 'Unauthorized' });
+      return response.status(401).send({ error: 'Unauthorized' });
     }
     const token = uuidv4();
-    redisClient.set(`auth_${token}`, user._id.toString(), 86400);
-    response.status(200).send({ token });
+    try {
+      await redisClient.set(`auth_${token}`, user._id.toString(), 60 * 60 * 24);
+    } catch (error) {
+      return response.status(500).send({ error: 'server error in redis' });
+    }
+    return response.status(200).send({ token });
   }
 
   static async getDisconnect(request, response) {
