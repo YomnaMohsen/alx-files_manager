@@ -6,8 +6,11 @@ import redisClient from '../utils/redis';
 class AuthController {
   static async getConnect(request, response) {
     const authheader = request.header('Authorization');
+    /* if (!authheader) {
+       response.status(401).send({ error: 'Unauthorized' });
+    } */
     const basecred = authheader.split(' ')[1];
-    const cred = Buffer.from(basecred, 'base64').toString('ascii');
+    const cred = Buffer.from(basecred, 'base64').toString('utf8');
     const [email, password] = cred.split(':');
     const hashpassword = crypto.createHash('sha1')
       .update(password)
