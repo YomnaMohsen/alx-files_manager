@@ -100,23 +100,7 @@ class FilesController {
       console.error(err);
       return res.status(500).send({ error: 'Server error with db' });
     }
-  }
-  static async getShow(req, res){
-
-  }
-  static async getIndex(req, res){
-
-  }
-  static async putPublish(req, res){
-
-  }
-  static async putUnpublish(req, res){
-
-  }
-  static async getFile(req, res){
-
-  }
-  
+  } 
 }
 
  
