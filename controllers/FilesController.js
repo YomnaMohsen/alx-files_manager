@@ -20,15 +20,15 @@ class FilesController {
   }
 
   static async postUpload(req, res) {
-    const user = await this.getuser(req);
+    const user = await FilesController.getuser(req);
     if (!user) {
-      res.status(401).send({ error: 'Unauthorized' });
+     return  res.status(401).send({ error: 'Unauthorized' });
     }
     const collection = dbClient.db.collection('files');
     const { name } = req.body.name;
     const { type } = req.body.type;
-    const { parentId } = req.body.parentId;
-    const { isPublic } = req.body.parentId || false;
+    const { parentId } = req.body.parentId || 0;
+    const { isPublic } = req.body.isPublic || false;
     const { data } = req.body.data;
 
     if (!name) {
@@ -44,10 +44,10 @@ class FilesController {
     if (parentId !== 0) {
       const foundParent = await collection.findOne({ _id: ObjectId(parentId) });
       if (!foundParent) {
-        res.status(400).send({ error: 'Parent not found' });
+        return res.status(400).send({ error: 'Parent not found' });
       }
       if (foundParent.type !== 'folder') {
-        res.status(400).send({ error: 'Parent is not a folder' });
+        return res.status(400).send({ error: 'Parent is not a folder' });
       }
     }
     let filedb;
@@ -60,11 +60,11 @@ class FilesController {
           isPublic,
           parentId: parentId || 0,
         });
-        /*  */
+
       } else {
         const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
         if (!fs.existsSync(folderPath)) {
-          fs.mkdirSync(folderPath, { recursive: true });
+          fs.mkdirSync(folderPath, { recursive: true }, () => {});
         }
         const fileName = uuidv4();
         const localPath = `${folderPath}/${fileName}`;
@@ -84,11 +84,12 @@ class FilesController {
           name,
           type,
           isPublic,
-          parentId: parentId || 0,
+          parentId,
         });
       }
     } catch (error) {
       console.log(error);
+      return res.status(500).send({ error: 'Server error with db' }); 
     }
   }
 }
