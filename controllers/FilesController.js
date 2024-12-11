@@ -19,78 +19,105 @@ class FilesController {
     return finduser;
   }
 
-  static async postUpload(req, res) {
+ 
+    static async postUpload(req, res) {
     const user = await FilesController.getuser(req);
-    if (!user) {
-     return  res.status(401).send({ error: 'Unauthorized' });
-    }
-    const collection = dbClient.db.collection('files');
-    const { name } = req.body.name;
-    const { type } = req.body.type;
-    const { parentId } = req.body.parentId || 0;
-    const { isPublic } = req.body.isPublic || false;
-    const { data } = req.body.data;
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
+    const name = req.body.name || null;
     if (!name) {
-      res.status(400).send({ error: 'Missing name' });
+      return res.status(400).send({ error: 'Missing name' });
     }
-    if (!type) {
-      res.status(400).send({ error: 'Missing type' });
+
+    const type = req.body.type || null;
+    if (!type || (type !== 'folder' && type !== 'file' && type !== 'image')) {
+      return res.status(400).send({ error: 'Missing type' });
     }
-    if (type !== 'folder' && !data) {
-      res.status(400).send({ error: 'Missing data' });
+
+    const data = req.body.data || null;
+    if (!data && type !== 'folder') {
+      return res.status(400).send({ error: 'Missing data' });
     }
+
+    const isPublic = req.body.isPublic || false;
+    const parentId = req.body.parentId || 0;
 
     if (parentId !== 0) {
-      const foundParent = await collection.findOne({ _id: ObjectId(parentId) });
-      if (!foundParent) {
+      const parantFound = await dbClient.db.collection('files')
+        .findOne({ _id: ObjectId(parentId) });
+
+      if (!parantFound) {
         return res.status(400).send({ error: 'Parent not found' });
       }
-      if (foundParent.type !== 'folder') {
+      if (parantFound.type !== 'folder') {
         return res.status(400).send({ error: 'Parent is not a folder' });
       }
     }
-    let filedb;
+
+    let fileDB;
+
     try {
       if (type === 'folder') {
-        filedb = await collection.insertOne({
-          userId: user._id,
-          name,
-          type,
-          isPublic,
-          parentId: parentId || 0,
-        });
-
+        fileDB = await dbClient.db.collection('files')
+          .insertOne({
+            userId: ObjectId(user._id),
+            name,
+            type,
+            isPublic,
+            parentId: parentId === 0 ? parentId : ObjectId(parentId),
+          });
       } else {
-        const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
-        if (!fs.existsSync(folderPath)) {
-          fs.mkdirSync(folderPath, { recursive: true }, () => {});
+        const FOLDER_PATH = process.env.FOLDER_PATH || '/tmp/files_manager';
+        if (!fs.existsSync(FOLDER_PATH)) {
+          fs.mkdirSync(FOLDER_PATH, { recursive: true }, () => {});
         }
-        const fileName = uuidv4();
-        const localPath = `${folderPath}/${fileName}`;
-        const clearData = Buffer.from(data, 'base64').toString();
-        await fs.promises.writeFile(localPath, clearData);
-        filedb = await collection.insertOne({
-          userId: user._id,
-          name,
-          type,
-          isPublic,
-          parentId: parentId || 0,
-          localPath,
-        });
-        return res.status(201).send({
-          id: filedb._id,
-          userId: user._id,
-          name,
-          type,
-          isPublic,
-          parentId,
-        });
+
+        const filename = uuidv4();
+        const localPath = `${FOLDER_PATH}/${filename}`;
+        const clearData = Buffer.from(data, 'base64');
+
+        await fs.promises.writeFile(localPath, clearData.toString());
+        fileDB = await dbClient.db.collection('files')
+          .insertOne({
+            userId: ObjectId(user._id),
+            name,
+            type,
+            isPublic,
+            parentId: parentId === 0 ? parentId : ObjectId(parentId),
+            localPath,
+          });
       }
-    } catch (error) {
-      console.log(error);
-      return res.status(500).send({ error: 'Server error with db' }); 
+
+      return res.status(201).json({
+        id: fileDB.ops[0]._id,
+        userId: user._id,
+        name,
+        type,
+        isPublic,
+        parentId,
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).send({ error: 'Server error with db' });
     }
   }
+  static async getShow(req, res){
+
+  }
+  static async getIndex(req, res){
+
+  }
+  static async putPublish(req, res){
+
+  }
+  static async putUnpublish(req, res){
+
+  }
+  static async getFile(req, res){
+
+  }
+  
 }
+
+ 
 export default FilesController;
