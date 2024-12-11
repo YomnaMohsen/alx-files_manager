@@ -113,9 +113,28 @@ class FilesController {
      const file = await dbClient.db.collection('files')
         .findOne({ userId: user._id,  _id : ObjectId(fID) });
      if (!file){
-      return res.status(404).send({ error: 'Not found' });
+      return res.status(404).json({ error: 'Not found' });
      }   
-     return res.status(200).json(file);
+     return res.json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
+
+  }
+
+  static async getIndex(req, res){
+    const tokenheader = request.header('X-Token');
+    if (!tokenheader) return res.status(401).json({ error: 'Unauthorized' });
+
+    const user = await FilesController.getuser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const parentId = req.query.parentId || '0';
+    const pagination = req.query.page || 0;
+    const pageSize = 20;
 
   }
 }
