@@ -105,17 +105,16 @@ class FilesController {
   static async getShow(req, res){
     const tokenheader = request.header('X-Token');
     if (!tokenheader) return res.status(401).json({ error: 'Unauthorized' });
-    const fID = req.params.id || '';
+    const fileID = req.params.id || '';
 
     const user = await FilesController.getuser(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-     const file = await dbClient.db.collection('files')
-        .findOne({ userId: user._id,  _id : ObjectId(fID) });
-     if (!file){
-      return res.status(404).json({ error: 'Not found' });
-     }   
-     return res.json({
+       const file = await dbClient.db.collection('files').findOne({
+      userId: user._id, _id: ObjectId(fileID),
+    });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+    return res.json({
       id: file._id,
       userId: file.userId,
       name: file.name,
@@ -123,7 +122,6 @@ class FilesController {
       isPublic: file.isPublic,
       parentId: file.parentId,
     });
-
   }
 
   static async getIndex(req, res){
