@@ -100,7 +100,24 @@ class FilesController {
       console.error(err);
       return res.status(500).send({ error: 'Server error with db' });
     }
-  } 
+  }
+
+  static async getShow(req, res){
+    const tokenheader = request.header('X-Token');
+    if (!tokenheader) return res.status(401).json({ error: 'Unauthorized' });
+    const fID = req.params.id || '';
+
+    const user = await FilesController.getuser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+     const file = await dbClient.db.collection('files')
+        .findOne({ userId: user._id,  _id : ObjectId(fID) });
+     if (!file){
+      return res.status(404).send({ error: 'Not found' });
+     }   
+     return res.status(200).json(file);
+
+  }
 }
 
  
