@@ -1,4 +1,6 @@
 import { ObjectId } from 'mongodb';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 
@@ -22,6 +24,7 @@ class FilesController {
     if (!user) {
       res.status(401).send({ error: 'Unauthorized' });
     }
+    const collection = dbClient.db.collection('files');
     const { name } = req.body.name;
     const { type } = req.body.type;
     const { parentId } = req.body.parentId;
@@ -39,15 +42,53 @@ class FilesController {
     }
 
     if (parentId !== 0) {
-      const collection = dbClient.db.collection('files');
       const foundParent = await collection.findOne({ _id: ObjectId(parentId) });
-      if (!foundParent){
+      if (!foundParent) {
         res.status(400).send({ error: 'Parent not found' });
       }
-      if (foundParent.type !== 'folder'){
+      if (foundParent.type !== 'folder') {
         res.status(400).send({ error: 'Parent is not a folder' });
       }
-
+    }
+    let filedb;
+    try {
+      if (type === 'folder') {
+        filedb = await collection.insertOne({
+          userId: user._id,
+          name,
+          type,
+          isPublic,
+          parentId: parentId || 0,
+        });
+        /*  */
+      } else {
+        const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
+        if (!fs.existsSync(folderPath)) {
+          fs.mkdirSync(folderPath, { recursive: true });
+        }
+        const fileName = uuidv4();
+        const localPath = `${folderPath}/${fileName}`;
+        const clearData = Buffer.from(data, 'base64').toString();
+        await fs.promises.writeFile(localPath, clearData);
+        filedb = await collection.insertOne({
+          userId: user._id,
+          name,
+          type,
+          isPublic,
+          parentId: parentId || 0,
+          localPath,
+        });
+        return res.status(201).send({
+          id: filedb._id,
+          userId: user._id,
+          name,
+          type,
+          isPublic,
+          parentId: parentId || 0,
+        });
+      }
+    } catch (error) {
+      console.log(error);
     }
   }
 }
