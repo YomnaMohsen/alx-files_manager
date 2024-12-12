@@ -103,7 +103,7 @@ class FilesController {
     }
   }
 
-  static async getShow(req, res){
+ /* static async getShow(req, res){
     const tokenheader = request.header('X-Token');
     if (!tokenheader) return res.status(401).json({ error: 'Unauthorized' });
     const fileID = req.params.id || '';
@@ -135,7 +135,7 @@ class FilesController {
     const pagination = req.query.page || 0;
     const pageSize = 20;
 
-  }
+  }*/
 }
 
  
